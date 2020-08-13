@@ -1,0 +1,108 @@
+<body style=overflow:hidden;margin:0>
+<title>TONE EXPRESS</title>
+<!-- what even lol -->
+<div style="float:left;width:calc(100% - 960px);height:720px;background-color:#444444;color:#ffffff;font:14px Verdana">
+	<span>Instrument to edit: </span>
+	<select id="instidx">
+		<option value="1">1</option>
+		<option value="2">2</option>
+		<option value="3">3</option>
+		<option value="4">4</option>
+		<option value="5">5</option>
+		<option value="6">6</option>
+	</select><br/>
+	<span>Oscillator 1 </span>
+	<span>Type: </span>
+	<select id="osc1type">
+		<option value="sine">sine</option>
+		<option value="square">square</option>
+		<option value="triangle">triangle</option>
+		<option value="sawtooth">sawtooth</option>
+	</select>
+	<span>Volume: </span>
+	<input type="range" min="1" max="3" value="0" id="osc1vol">
+	<span>Tune: </span>
+	<input type="range" min="0" max="2" value="0" id="osc1tune"><br/>
+	<span>Oscillator 2 </span>
+	<span>Type: </span>
+	<select id="osc2type">
+		<option value="sine">sine</option>
+		<option value="square">square</option>
+		<option value="triangle">triangle</option>
+		<option value="sawtooth">sawtooth</option>
+	</select>
+	<span>Volume: </span>
+	<input type="range" min="1" max="3" value="0" id="osc2vol">
+	<span>Tune: </span>
+	<input type="range" min="0" max="2" value="0" id="osc2tune"><br/>
+	<span>Oscillator 3 </span>
+	<span>Type: </span>
+	<select id="osc3type">
+		<option value="sine">sine</option>
+		<option value="square">square</option>
+		<option value="triangle">triangle</option>
+		<option value="sawtooth">sawtooth</option>
+	</select>
+	<span>Volume: </span>
+	<input type="range" min="1" max="3" value="0" id="osc3vol">
+	<span>Tune: </span>
+	<input type="range" min="0" max="2" value="0" id="osc3tune"><br/>
+	<div>
+		<input type="range" min="0" max="7" value="0" id="attack">
+		<label>Attack</label>
+	</div>
+	<div>
+		<input type="range" min="0" max="7" value="0" id="decay">
+		<label>Decay</label>
+	</div>
+	<div>
+		<input type="range" min="0" max="7" value="0" id="sustain">
+		<label>Sustain</label>
+	</div>
+	<div>
+		<input type="range" min="0" max="7" value="0" id="susdecay">
+		<label>Sus Decay</label>
+	</div>
+	<div>
+		<input type="range" min="0" max="7" value="0" id="cutoff">
+		<label>Cutoff</label>
+	</div>
+	<input type="button" value="Test" id="testosc">
+	<br/>
+	<br/>
+	<div>
+		<a style=font-size:30px;text-decoration:none href="javascript:backfast();" id="backfast">⏪</a>
+		<a style=font-size:30px;text-decoration:none href="javascript:back();" id="back">◀️</a>
+		<a style=font-size:30px;text-decoration:none href="javascript:playpause();" id="playpause">⏯️</a>
+		<a style=font-size:30px;text-decoration:none href="javascript:forward();" id="forward">▶️</a>
+		<a style=font-size:30px;text-decoration:none href="javascript:forfast();" id="forfast">⏩</a>
+	</div>
+	<div>
+		<input type="number" min="1" max="511" value="150" id="bpm">
+		<label>BPM</label>
+	</div>
+	<div>
+		<input type="number" min="1" max="62" value="1" id="end">
+		<label>End</label>
+	</div>
+	<div>
+		<input type="number" min="2" max="6" value="4" id="step">
+		<label>/4 Step</label>
+	</div>
+	<div>
+		<a style=font-size:30px;text-decoration:none href="javascript:copysel();" id="copysel">📄</a>
+		<a style=font-size:30px;text-decoration:none href="javascript:pastesel();" id="pastesel">📋</a>
+		<a style=font-size:30px;text-decoration:none href="javascript:deletesel();" id="deletesel">❌</a>
+		<a style=font-size:30px;text-decoration:none href="javascript:deleteselall();" id="deleteselall">✖️</a>
+	</div>
+	<div>
+		<a style=font-size:30px;text-decoration:none href="javascript:loadls();" id="loadls">📂</a>
+		<a style=font-size:30px;text-decoration:none href="javascript:savels();" id="savels">💾</a>
+		<a style=font-size:30px;text-decoration:none href="javascript:savejson();" id="savejson">💿</a>
+		<a style=font-size:30px;text-decoration:none href="javascript:expmusic();" id="expmusic">🗜️</a>
+	</div>
+</div>
+<canvas id=e width=960 height=720 style=float:right></canvas>
+<script src="sjss.js"></script>
+<script src="toneexp.js"></script>
+</body>

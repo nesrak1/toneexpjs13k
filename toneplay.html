@@ -1,0 +1,230 @@
+<script>
+//sjss.js
+function SimpleJSSynth(dest, opts) {
+	var ctx = dest.context;
+
+	var filter = ctx.createBiquadFilter();
+	filter.type = "lowpass";
+	filter.frequency.setValueAtTime(22050, ctx.currentTime);
+	filter.Q.setValueAtTime(0.5, ctx.currentTime);
+
+	var gain = ctx.createGain();
+	gain.gain.setValueAtTime(0, ctx.currentTime);
+	gain.connect(filter);
+
+	function oscgain(v) {
+		var g = ctx.createGain();
+		g.gain.setValueAtTime(0, ctx.currentTime);
+		g.connect(gain);
+		return { node: g, base: v };
+	}
+	var osc1gain = oscgain(opts.osc1vol);
+	var osc2gain = oscgain(opts.osc2vol);
+	var osc3gain = oscgain(opts.osc3vol);
+
+	function osctype(type, g) {
+		var osc = ctx.createOscillator();
+		osc.type = type;
+		osc.connect(g);
+		return osc;
+	}
+	var osc1 = osctype(opts.osc1type, osc1gain.node);
+	var osc2 = osctype(opts.osc2type, osc2gain.node);
+	var osc3 = osctype(opts.osc3type, osc3gain.node);
+
+	function calctune(t) {
+		return 2 ** (t / 12);
+	}
+	var tune1 = calctune(opts.osc1tune);
+	var tune2 = calctune(opts.osc2tune);
+	var tune3 = calctune(opts.osc3tune);
+	var cutoff = calctune(opts.cutoff);
+
+	var attack   = opts.attack;
+	var decay    = opts.decay;
+	var sustain  = opts.sustain;
+	var susdecay = opts.susdecay;
+
+	var basefreq = 0;
+	var silent = 0;
+	var ndown = false;
+
+	osc1.start();
+	osc2.start();
+	osc3.start();
+
+	filter.connect(dest);
+
+	filter.noteOn = function(freq, vol) {
+		ndown = true;
+		basefreq = freq;
+		var now = ctx.currentTime;
+		osc1.frequency.setValueAtTime(freq * tune1, now);
+		osc2.frequency.setValueAtTime(freq * tune2, now);
+		osc3.frequency.setValueAtTime(freq * tune3, now);
+		filter.frequency.setValueAtTime(Math.min(freq * cutoff, 22050), now);
+		osc1gain.node.gain.setValueAtTime(vol * osc1gain.base, now);
+		osc2gain.node.gain.setValueAtTime(vol * osc2gain.base, now);
+		osc3gain.node.gain.setValueAtTime(vol * osc3gain.base, now);
+		var v = gain.gain.value;
+		gain.gain.cancelScheduledValues(now);
+		gain.gain.setValueAtTime(v, now);
+		var hitpeak = now + attack;
+		var hitsus = hitpeak + decay * (1 - sustain);
+		silent = hitsus + susdecay;
+		gain.gain.linearRampToValueAtTime(1, hitpeak);
+		gain.gain.linearRampToValueAtTime(sustain, hitsus);
+		gain.gain.linearRampToValueAtTime(0.000001, silent);
+	};
+
+	filter.noteOff = function() {
+		ndown = false;
+		var now = ctx.currentTime;
+		var v = gain.gain.value;
+		gain.gain.cancelScheduledValues(now);
+		gain.gain.setValueAtTime(v, now);
+		silent = now + decay * v;
+		gain.gain.linearRampToValueAtTime(0.000001, silent);
+	};
+
+	filter.isReady = function() {
+		return ctx.currentTime >= silent && !ndown;
+	};
+
+	filter.stop = function() {
+		ndown = false;
+		var now = ctx.currentTime;
+		osc1gain.node.gain.setValueAtTime(0.000001, now);
+		osc2gain.node.gain.setValueAtTime(0.000001, now);
+		osc3gain.node.gain.setValueAtTime(0.000001, now);
+		silent = 0;
+	};
+	return filter;
+}
+
+var synths = [];
+var actx = new AudioContext();
+for (var i = 0; i < 6; i++) {
+	synths.push(SimpleJSSynth(actx.destination, {
+		osc1type: "sine",
+		osc2type: "square",
+		osc3type: "sine",
+		osc2vol: 0.25,
+		osc3vol: 0.125,
+		osc1vol: 0.375,
+		osc1tune: 0,
+		osc2tune: 12,
+		osc3tune: -12,
+		attack: 0,
+		cutoff: 20,
+		decay: 0.571,
+		susdecay: 0.714,
+		sustain: 0.22
+	}));
+}
+/////////
+//bindec.js
+var pos;
+var buf;
+function loadDat(str) {
+	pos = 0;
+	buf = str;
+}
+function readChars(len) {
+	var str = buf.substr(pos, len);
+	pos += len;
+	return str;
+}
+function decodeStr(len) {
+	return parseInt(readChars(len), 8);
+}
+///////////
+
+var notes;
+var wait, step, songPos;
+var blockBuffers;
+
+function playSong(str) {
+	loadDat(str);
+	notes = [];
+	songPos = 0;
+	for (var i = 0; i < 1000; i++) {
+		notes[i] = [];
+	}
+	wait = decodeStr(3);
+	step = decodeStr(1);
+	var blockIndices = [];
+	var uniqueBlocks = [];
+	for (var i = 0; i < 6; i++) {
+		blockIndices[i] = [];
+		uniqueBlocks[i] = [];
+		var blockIndicesCount = decodeStr(2);
+		for (var j = 0; j < blockIndicesCount; j++) {
+			blockIndices[i].push(decodeStr(2));
+		}
+		var uniqueBlockCount = decodeStr(2);
+		for (var j = 0; j < uniqueBlockCount; j++) {
+			uniqueBlocks[i][j] = [];
+			var blockStrLen = decodeStr(3);
+			if (blockStrLen != 0) {
+				var block = readChars(blockStrLen);
+				var curPitch = parseInt(block.substr(0, 3), 8);
+				for (var k = 3; k < block.length; k += 3) {
+					var blockData = parseInt(block.substr(k, 3), 8);
+					var noteLen = blockData & 0xf;
+					if ((blockData & 0x100) == 0x100) {
+						uniqueBlocks[i][j].push([null, noteLen]);
+					} else {
+						var notePitchOff = ((blockData & 0x80) >> 4) * (-1 * ((blockData & 0x100) >> 8));
+						curPitch += notePitchOff;
+						uniqueBlocks[i][j].push([curPitch, noteLen]);
+					}
+				}
+			}
+		}
+	}
+	blockBuffers = [];
+	for (var i = 0; i < 6; i++) {
+		blockBuffers[i] = [];
+		var uniqueBlock = uniqueBlocks[i];
+		var blockIndex = blockIndices[i];
+		for (var j = 0; j < blockIndices[i].length; j++) {
+			blockBuffers[i].push(uniqueBlock[blockIndex[j]]);
+		}
+	}
+	for (var i = 0; i < 6; i++) {
+		var blockBuffer = blockBuffers[i];
+		for (var j = 0; j < blockBuffer.length; j++) {
+			var pos = j * 16;
+			var block = blockBuffer[j];
+			for (var k = 0; k < block.length; k++) {
+				var note = block[k];
+				if (note[0] != null) {
+					notes[pos].push(note.concat(i));
+				}
+				pos += note[1];
+			}
+		}
+	}
+	
+	setInterval(function() {
+		var i = notes[songPos];
+        i.forEach(function(j, jdx) {
+            var y = j[0];
+            var len = j[1];
+            var synthIdx = j[2];
+			var freq = 440*2**((31-y)/12);
+			synths[synthIdx].noteOn(freq, 0.5);
+			setTimeout(function(s) {
+				s.noteOff();
+			}, len*wait-10, synths[synthIdx]);
+        });
+		songPos++;
+		if (songPos >= 1000) {
+			songPos = 0;
+		}
+	}, wait);
+}
+//put song data here:
+playSong("1104410000000100000001020202020202020202020202020202020202020202020202020302505040200400400200200202505140200400400200200200306900000000000041000001020000010203030303030303030303030303030303030303030303030303040250444020040040020020020250534020040040020020020250464020040040020020020030694100000102000001020303030303030303030303030303030303030303030303030304006067000006073000006071000003069");
+</script>
